@@ -52,6 +52,7 @@ class Game:
                         
                 self.input_box.is_valid = True
                 self.game_started = True
+                self.game_ended = False
                 self.dots_count = self.input_box.result
                 self.load_board(self.dots_count)
 
@@ -74,10 +75,10 @@ class Game:
         self.board_buttons = pg.sprite.Group()
 
         self.restart_button = Restart(button_image, (100, 100), self.restart)
-
-        
         
         self.buttons.add(self.restart_button)
+        
+        self.game_ended = False
        
         self.game_started = False        
         self.dots_count = None
@@ -143,11 +144,11 @@ class Game:
                 if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                     for button in self.buttons:
                         button.detect_click(event)
-                    
-                    #получение данных о нажатии на кнопку в игровом поле
-                    for board_but in self.board_buttons:
-                        board_but.detect_click(event)    
-                    
+                    if self.game_ended is False:
+                        #получение данных о нажатии на кнопку в игровом поле
+                        for board_but in self.board_buttons:
+                            board_but.detect_click(event)    
+                        
                 pass
 
     # загрузка игрового поля
@@ -187,7 +188,7 @@ class Game:
 
                 # Если хотя бы одна линия возможна, возвращаем True
                 return True
-
+        self.game_ended = True  # Если не нашли ни одной линии, игра окончена
         return False
 
     def line_crosses_button(self, line):
@@ -306,9 +307,9 @@ class Game:
             pg.draw.rect(self.screen, (255,0,0), pg.Rect(370, 50, 40, 40))
             pg.draw.rect(self.screen, (157,0,255), pg.Rect(370, 100, 40, 40))
             Text(420, 60, "1. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
-            Text(520, 60, str(self.player_1), "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(540, 60, str(self.player_1), "Arial", 20, (255, 255, 255)).draw(self.screen)
             Text(420, 110, "2. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
-            Text(520, 110, str(self.player_2), "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(540, 110, str(self.player_2), "Arial", 20, (255, 255, 255)).draw(self.screen)
             for line in self.lines:
                 pg.draw.line(self.screen, (0, 255, 0), line[0], line[1], 2)
             pass
