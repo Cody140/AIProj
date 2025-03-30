@@ -1,8 +1,10 @@
 import pygame as pg
 from ui.Buttons import Restart, BoardButton
+from ui.ButtonWithText import ButtonWithText
 from ui.Input import InputBox
 import numpy as np
-
+from ui.Text import Text
+from ui.Radio import RadioButton,RadioButtonGroup
 
 
 
@@ -13,13 +15,58 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.screen = pg.display.set_mode((840, 680))
-
-        self.input_box = InputBox(100, 100, 140, 32)
+        
+        self.input_box = InputBox(100, 508, 140, 32)
         
         self.game_table = None
         
-        button_image = pg.Surface((40, 40))
-        button_image.fill("red")
+        self.tittle = Text(250, 50, "1.Praktiskais darbs", "Arial", 48, (255, 255, 255))
+
+        self.radioButtons= RadioButtonGroup()
+        """Izvēlas kurš uzsāk spēli"""
+        self.firstPlayer = "human"
+        def set_firstPlayer():
+            if self.radioButtons.get_checked("firstPlayer") != None:
+                self.firstPlayer = self.radioButtons.get_checked("firstPlayer").get_value()
+
+        self.human = RadioButton(100, 170, "firstPlayer","human", "Cilvēks",24,on_click=set_firstPlayer, checked=True)
+        self.ai = RadioButton(200, 170, "firstPlayer","ai", "Mākslīgais intelekts",24,on_click=set_firstPlayer)
+        self.radioButtons.add(self.human)
+        self.radioButtons.add(self.ai)
+        
+        """Izvēlas algoritmu"""
+        self.algorithm = "minimax"
+        def set_algorithm():
+            if self.radioButtons.get_checked("algorithm") != None:
+                self.algorithm = self.radioButtons.get_checked("algorithm").get_value()
+
+        self.minimax = RadioButton(100, 245, "algorithm","minimax", "Minimaks",24,on_click=set_algorithm, checked=True)
+        self.alpha_beta = RadioButton(215, 245, "algorithm","alpha_beta", "Alfa-beta",24,on_click=set_algorithm)
+        self.radioButtons.add(self.minimax)
+        self.radioButtons.add(self.alpha_beta)
+
+        def startGame():
+            print("hi")
+            result = self.input_box.result = int(self.input_box.text)
+            if result >= 15 and result <= 25:
+                        
+                self.input_box.is_valid = True
+                self.game_started = True
+                self.dots_count = self.input_box.result
+                self.load_board(self.dots_count)
+
+        self.startButton = ButtonWithText(
+        320, 500, 200, 50, 
+        "Sākt spēli!", 
+        on_click=startGame,
+        normal_color=(50, 150, 250),
+        hover_color=(80, 180, 255),
+        pressed_color=(30, 120, 220)
+        )
+        
+
+        button_image = pg.Surface((200, 50))
+        button_image.fill((50, 150, 250))
         
         self.buttons = pg.sprite.Group()
 
@@ -27,9 +74,11 @@ class Game:
         self.board_buttons = pg.sprite.Group()
 
         self.restart_button = Restart(button_image, (100, 100), self.restart)
+
+        
         
         self.buttons.add(self.restart_button)
-        
+       
         self.game_started = False        
         self.dots_count = None
         
@@ -39,7 +88,10 @@ class Game:
         self.player_1 = 0
         self.player_2 = 0
         self.turn = True
+
         
+    
+    
         
     def line_intersects(self,line1, line2):
         """Проверяет пересечение двух линий."""
@@ -58,6 +110,8 @@ class Game:
         self.dots_count = None
         self.input_box.is_valid = False
         self.input_box.result = None
+        self.input_box.text = ""
+        self.input_box.txt_surface = self.input_box.FONT.render("", True, self.input_box.color)
         self.board_buttons.empty()
         self.lines = []
         self.selected = None
@@ -81,11 +135,9 @@ class Game:
             # если игра не началась, то обрабатываем события для ввода количества точек
             if self.game_started is False:
                 self.input_box.handle_event(event)
+                self.radioButtons.handle_event(event)
+                self.startButton.handle_event(event)
                 # если пользователь ввел правильное число точек, то начинаем игру    
-                if self.input_box.is_valid:
-                    self.game_started = True
-                    self.dots_count = self.input_box.result
-                    self.load_board(self.dots_count)
             
             else:
                 if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
@@ -100,6 +152,8 @@ class Game:
 
     # загрузка игрового поля
     def load_board(self, count):
+        print("Speli uzsak-"+self.firstPlayer)
+        print("Speles algoritms-"+self.algorithm)
         n = int(count ** 0.5)  # Приблизительный размер стороны
         m = (count + n - 1) // n
         self.board = np.full((n, m), -1, dtype=int)  # Доска заполнена -1
@@ -202,8 +256,14 @@ class Game:
                         
                         button.active = False
                         self.lines.append(new_line)  # Добавляем линию только если не пересеклось
-                        button.set_color((255,0,0))
-                        self.selected.set_color((255,0,0))
+                        if self.turn:
+                            button.set_color((255,0,0))
+                            self.selected.set_color((255,0,0))
+                        else:
+                            button.set_color((157,0,255))
+                            self.selected.set_color((157,0,255))
+                       
+                        
                         
                         
                         self.player_1 += 1 if self.turn else 0
@@ -213,11 +273,11 @@ class Game:
                         
                         if not self.check_available_moves():
                             if self.player_1 > self.player_2:
-                                print("Игра окончена! Победил игрок 1!")
+                                print("Spele pabeigta Игра окончена! uzvareja 1 Победил игрок 1!")
                             elif self.player_1 < self.player_2:
-                                print("Игра окончена! Победил игрок 2!")
+                                print("Spele pabeigta Игра окончена! uzvareja 2 Победил игрок 2!")
                             else:
-                                print("Игра окончена! Ничья!")
+                                print("Spele pabeigta Игра окончена! izskirts Ничья!")
                     self.selected = None
 
     def update(self):
@@ -225,13 +285,30 @@ class Game:
             self.input_box.update()
     
     def draw(self):
+
         self.screen.fill((30, 30, 30))
         
         if self.game_started is False:
+            self.screen.fill((30, 30, 30))
+            self.tittle.draw(self.screen)
+            Text(100, 120, "Kurš uzsāk spēli?", "Arial", 24, (255, 255, 255)).draw(self.screen)
+            self.radioButtons.draw(self.screen)
+            Text(100, 205, "Kurš algoritms tiks pielietots?", "Arial", 24, (255, 255, 255)).draw(self.screen)
             self.input_box.draw(self.screen)
+            self.startButton.draw(self.screen)
+            Text(120, 550, "Sākot no 15 līdz 25", "Arial", 13, (255, 255, 255)).draw(self.screen)
+              
         else:
             self.buttons.draw(self.screen)
             self.board_buttons.draw(self.screen)
+            
+            Text(145, 113, "Sākt no jauna", "Arial", 20, (255, 255, 255),True).draw(self.screen)
+            pg.draw.rect(self.screen, (255,0,0), pg.Rect(370, 50, 40, 40))
+            pg.draw.rect(self.screen, (157,0,255), pg.Rect(370, 100, 40, 40))
+            Text(420, 60, "1. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(520, 60, str(self.player_1), "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(420, 110, "2. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(520, 110, str(self.player_2), "Arial", 20, (255, 255, 255)).draw(self.screen)
             for line in self.lines:
                 pg.draw.line(self.screen, (0, 255, 0), line[0], line[1], 2)
             pass
@@ -243,3 +320,4 @@ if __name__ == '__main__':
     game = Game()
     while game.running:
         game.game_loop()
+    
