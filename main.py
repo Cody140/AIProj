@@ -7,8 +7,6 @@ from ui.Text import Text
 from ui.Radio import RadioButton,RadioButtonGroup
 
 
-
-
 class Game: 
     def __init__(self):
         pg.init()
