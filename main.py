@@ -308,10 +308,23 @@ class Game:
             Text(540, 60, str(self.player_1), "Arial", 20, (255, 255, 255)).draw(self.screen)
             Text(420, 110, "2. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
             Text(540, 110, str(self.player_2), "Arial", 20, (255, 255, 255)).draw(self.screen)
+            
+
+
+            if not self.check_available_moves():
+                            if self.player_1 > self.player_2:
+                                Text(390, 160, "Spēle pabeigta! Uzvarēja 1. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                                
+                            elif self.player_1 < self.player_2:
+                                Text(390, 160, "Spēle pabeigta! Uzvarēja 2. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                            else:
+                                Text(390, 160, "Spēle pabeigta! Izšķirts!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+
+            
             for line in self.lines:
                 pg.draw.line(self.screen, (0, 255, 0), line[0], line[1], 2)
             pass
-        
+            
         
         pg.display.flip()
 
