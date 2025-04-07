@@ -5,6 +5,7 @@ from ui.Input import InputBox
 import numpy as np
 from ui.Text import Text
 from ui.Radio import RadioButton,RadioButtonGroup
+from gamestate import GameState, minimax_decision
 
 
 class Game: 
@@ -221,7 +222,8 @@ class Game:
         return False
                 
     def update_buttons(self):
-        pos = pg.mouse.get_pos()
+        if (self.firstPlayer == "human" and self.turn) or (self.firstPlayer == "ai" and not self.turn):
+            pos = pg.mouse.get_pos()
         for button in self.board_buttons:
             if button.rect.collidepoint(pos) and button.active == True:
                 print("button_active ")
@@ -239,8 +241,8 @@ class Game:
                                 # self.selected.active = True
                                 # self.selected = None
                                 print(f"Пересечение! Очки: ")
-                                self.player_1 -= 1 if self.turn else 0
-                                self.player_2 -= 1 if not self.turn else 0
+                                self.player_1 += 1 if self.turn else 0
+                                self.player_2 += 1 if not self.turn else 0
                                 
                                 #return
                         
@@ -258,30 +260,136 @@ class Game:
                         if self.turn:
                             button.set_color((255,0,0))
                             self.selected.set_color((255,0,0))
+    def update_buttons(self):
+        pos = pg.mouse.get_pos()
+        for button in self.board_buttons:
+            if button.rect.collidepoint(pos) and button.active:
+                # If no dot has been selected yet, select this dot.
+                if self.selected is None:
+                    self.selected = button
+                    button.set_color((0, 0, 255))  # Blue indicates selection.
+                    button.active = False
+                    return  # Wait for the next click.
+                else:
+                    # Second dot is selected; create the connection.
+                    new_line = (self.selected.center_coords, button.center_coords)
+                    # Ensure we don't duplicate an existing connection.
+                    if new_line in self.lines or new_line[::-1] in self.lines:
+                        self.selected = None
+                        return
+
+                    # Check if the move is illegal.
+                    illegal = False
+                    # Check for crossing any existing line.
+                    for existing_line in self.lines:
+                        if self.line_intersects(existing_line, new_line):
+                            illegal = True
+                            break
+                    # Check if the new line passes through any other dot.
+                    if not illegal and self.line_crosses_button(new_line):
+                        illegal = True
+
+                    # If illegal, apply a penalty to the mover.
+                    if illegal:
+                        print("Illegal move detected: penalty applied, but connection will be drawn.")
+                        if self.turn:
+                            self.player_1 += 1
                         else:
-                            button.set_color((157,0,255))
-                            self.selected.set_color((157,0,255))
-                       
-                        
-                        
-                        
-                        self.player_1 += 1 if self.turn else 0
-                        self.player_2 += 1 if not self.turn else 0
-                        self.turn = not self.turn
-                        print(f"Очки: p1 {self.player_1} - p2 {self.player_2}")
-                        
-                        if not self.check_available_moves():
-                            if self.player_1 > self.player_2:
-                                print("Spele pabeigta Игра окончена! uzvareja 1 Победил игрок 1!")
-                            elif self.player_1 < self.player_2:
-                                print("Spele pabeigta Игра окончена! uzvareja 2 Победил игрок 2!")
-                            else:
-                                print("Spele pabeigta Игра окончена! izskirts Ничья!")
+                            self.player_2 += 1
+
+                    # Draw the connection regardless of legality.
+                    button.active = False
+                    self.lines.append(new_line)
+                    button.set_color((255, 0, 0))
+                    self.selected.set_color((255, 0, 0))
+                    # Switch the turn.
+                    self.turn = not self.turn
+                    # Clear the selection.
                     self.selected = None
+                    return
+
+
+    def apply_ai_move(self, p1, p2):
+        """
+        Mark the two buttons used by the AI, set their color,
+        and update self.lines.
+        """
+        # Find the two BoardButton objects
+        button1 = None
+        button2 = None
+        for btn in self.board_buttons:
+            if btn.center_coords == p1:
+                button1 = btn
+            elif btn.center_coords == p2:
+                button2 = btn
+
+        # Mark them as inactive, set AI color
+        if button1:
+            button1.active = False
+            button1.set_color((157, 0, 255))  # AI color
+        if button2:
+            button2.active = False
+            button2.set_color((157, 0, 255))
+
+        # Add the line
+        self.lines.append((p1, p2))
+
+        # Reset any user selection
+        self.selected = None
 
     def update(self):
-        if self.game_started is False:
+        if not self.game_started:
             self.input_box.update()
+        elif not self.game_ended:
+            # ...
+            if (self.firstPlayer == "ai" and self.turn) or (self.firstPlayer == "human" and not self.turn):
+                # Build state and run minimax
+                state = GameState(
+                    board=[btn.center_coords for btn in self.board_buttons],
+                    lines=self.lines,
+                    current_player=self.turn,
+                    score1=self.player_1,
+                    score2=self.player_2
+                )
+                depth = 2
+                best_move, best_value = minimax_decision(state, depth, True)
+                if best_move is not None:
+                    p1, p2 = best_move
+                    new_line = (p1, p2)
+
+                    # 1) Check crossing
+                    crossing = False
+                    for existing_line in self.lines:
+                        if self.line_intersects(existing_line, new_line):
+                            crossing = True
+                            break
+
+                    if crossing:
+                        print("AI move crosses an existing line! Penalty to opponent.")
+                        if self.turn:   # AI is player1
+                            self.player_2 += 1
+                        else:           # AI is player2
+                            self.player_1 += 1
+                        # No move is added, just switch turn
+                        self.turn = not self.turn
+
+                    else:
+                        # 2) Check if it goes through another button
+                        if self.line_crosses_button(new_line):
+                            print("AI move goes through a button, illegal. Penalty to opponent.")
+                            if self.turn:
+                                self.player_2 += 1
+                            else:
+                                self.player_1 += 1
+                            self.turn = not self.turn
+                        else:
+                            # 3) Legal move: apply AI move, but do NOT award a point
+                            self.apply_ai_move(p1, p2)
+                            # Just switch turn, no points for normal line
+                            self.turn = not self.turn
+
+
+            
     
     def draw(self):
 
@@ -313,10 +421,10 @@ class Game:
 
             if not self.check_available_moves():
                             if self.player_1 > self.player_2:
-                                Text(390, 160, "Spēle pabeigta! Uzvarēja 1. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                                Text(390, 160, "Spēle pabeigta! Uzvarēja 2. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
                                 
                             elif self.player_1 < self.player_2:
-                                Text(390, 160, "Spēle pabeigta! Uzvarēja 2. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                                Text(390, 160, "Spēle pabeigta! Uzvarēja 1. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
                             else:
                                 Text(390, 160, "Spēle pabeigta! Izšķirts!", "Arial", 20, (255, 255, 255)).draw(self.screen)
 
