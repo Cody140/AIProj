@@ -221,45 +221,7 @@ class Game:
 
         return False
                 
-    def update_buttons(self):
-        if (self.firstPlayer == "human" and self.turn) or (self.firstPlayer == "ai" and not self.turn):
-            pos = pg.mouse.get_pos()
-        for button in self.board_buttons:
-            if button.rect.collidepoint(pos) and button.active == True:
-                print("button_active ")
-                
-                if self.selected is None:
-                    self.selected = button
-                    button.set_color((0,0,255))
-                    button.active = False
-                else:
-                    new_line = (self.selected.center_coords, button.center_coords)
-                    if new_line not in self.lines and new_line[::-1] not in self.lines:  # Проверка дубликатов
-                        for existing_line in self.lines:
-                            if self.line_intersects(existing_line, new_line):
-                                # self.selected.set_color((0,255,0))
-                                # self.selected.active = True
-                                # self.selected = None
-                                print(f"Пересечение! Очки: ")
-                                self.player_1 += 1 if self.turn else 0
-                                self.player_2 += 1 if not self.turn else 0
-                                
-                                #return
-                        
-                        if self.line_crosses_button(new_line):
-                            print("Линия проходит через кнопку! Запрещено.")
-                            
-                            # Отменяем выбор
-                            self.selected.set_color((0, 255, 0))
-                            self.selected.active = True
-                            self.selected = None
-                            return  # Выход из метода
-                        
-                        button.active = False
-                        self.lines.append(new_line)  # Добавляем линию только если не пересеклось
-                        if self.turn:
-                            button.set_color((255,0,0))
-                            self.selected.set_color((255,0,0))
+    
     def update_buttons(self):
         pos = pg.mouse.get_pos()
         for button in self.board_buttons:
@@ -300,8 +262,12 @@ class Game:
                     # Draw the connection regardless of legality.
                     button.active = False
                     self.lines.append(new_line)
-                    button.set_color((255, 0, 0))
-                    self.selected.set_color((255, 0, 0))
+                    if self.firstPlayer== "human":
+                        button.set_color((255, 0, 0))
+                        self.selected.set_color((255, 0, 0))
+                    elif self.firstPlayer== "ai":
+                        button.set_color((157, 0, 255))
+                        self.selected.set_color((157, 0, 255))
                     # Switch the turn.
                     self.turn = not self.turn
                     # Clear the selection.
@@ -324,12 +290,20 @@ class Game:
                 button2 = btn
 
         # Mark them as inactive, set AI color
-        if button1:
-            button1.active = False
-            button1.set_color((157, 0, 255))  # AI color
-        if button2:
-            button2.active = False
-            button2.set_color((157, 0, 255))
+        if self.firstPlayer == "ai": 
+            if button1:
+                button1.active = False
+                button1.set_color((255, 0, 0))  # AI color
+            if button2:
+                button2.active = False
+                button2.set_color((255, 0, 0))
+        elif self.firstPlayer =="human":
+            if button1:
+                button1.active = False
+                button1.set_color((157, 0, 255))  # AI color
+            if button2:
+                button2.active = False
+                button2.set_color((157, 0, 255))
 
         # Add the line
         self.lines.append((p1, p2))
