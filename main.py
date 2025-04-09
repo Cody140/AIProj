@@ -46,7 +46,10 @@ class Game:
 
         def startGame():
             print("hi")
-            result = self.input_box.result = int(self.input_box.text)
+            try:
+                result = self.input_box.result = int(self.input_box.text)
+            except:
+                return
             if result >= 15 and result <= 25:
                         
                 self.input_box.is_valid = True
@@ -92,18 +95,7 @@ class Game:
         
     
     
-        
-    def line_intersects(self,line1, line2):
-        """Проверяет пересечение двух линий."""
-        (x1, y1), (x2, y2) = line1
-        (x3, y3), (x4, y4) = line2
 
-        def ccw(a, b, c):
-            return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
-
-        return ccw((x1, y1), (x3, y3), (x4, y4)) != ccw((x2, y2), (x3, y3), (x4, y4)) and \
-            ccw((x1, y1), (x2, y2), (x3, y3)) != ccw((x1, y1), (x2, y2), (x4, y4))
-        
     #перезапустить игру
     def restart(self):
         self.game_started = False
@@ -147,8 +139,6 @@ class Game:
                         #получение данных о нажатии на кнопку в игровом поле
                         for board_but in self.board_buttons:
                             board_but.detect_click(event)    
-                        
-                pass
 
     # загрузка игрового поля
     def load_board(self, count):
@@ -171,14 +161,19 @@ class Game:
                 
     def check_available_moves(self):
         """Проверяет, можно ли провести хотя бы одну новую линию"""
-        active_buttons = [btn for btn in self.board_buttons if btn.active]
+        # active_buttons = [btn for btn in self.board_buttons if btn.active]
 
-        for i, btn1 in enumerate(active_buttons):
-            for btn2 in active_buttons[i + 1:]:  # Перебираем пары кнопок
+        for btn1 in self.board_buttons:
+            if btn1.active is False:
+                continue
+            for btn2 in self.board_buttons:
+                if btn2.active is False or btn1 == btn2:
+                    continue
+                      
                 new_line = (btn1.center_coords, btn2.center_coords)
 
                 # Проверяем, нет ли такой линии уже
-                if new_line in self.lines or new_line[::-1] in self.lines:
+                if new_line in self.lines: # or new_line[::-1] in self.lines:
                     continue
 
                 # Проверяем, не проходит ли новая линия через другие кнопки
@@ -200,26 +195,12 @@ class Game:
 
             # Проверяем, находится ли центр кнопки внутри отрезка
             bx, by = button.center_coords
-            if self.point_on_segment((x1, y1), (x2, y2), (bx, by)):
+            if GameState.point_on_segment((x1, y1), (x2, y2), (bx, by)):
                 return True  # Линия проходит через кнопку
 
         return False
 
-    def point_on_segment(self, p1, p2, p):
-        """Проверяет, лежит ли точка p на отрезке p1-p2"""
-        (x1, y1), (x2, y2) = p1, p2
-        (px, py) = p
 
-        # Проверка, лежит ли точка p на одной прямой с p1 и p2
-        cross_product = (py - y1) * (x2 - x1) - (px - x1) * (y2 - y1)
-        if abs(cross_product) > 1e-6:  # Числовая погрешность
-            return False
-
-        # Проверка, лежит ли точка p между p1 и p2 по координатам X и Y
-        if min(x1, x2) <= px <= max(x1, x2) and min(y1, y2) <= py <= max(y1, y2):
-            return True
-
-        return False
                 
     
     def update_buttons(self):
@@ -234,6 +215,7 @@ class Game:
                     return  # Wait for the next click.
                 else:
                     # Second dot is selected; create the connection.
+                
                     new_line = (self.selected.center_coords, button.center_coords)
                     # Ensure we don't duplicate an existing connection.
                     if new_line in self.lines or new_line[::-1] in self.lines:
@@ -244,13 +226,13 @@ class Game:
                     illegal = False
                     # Check for crossing any existing line.
                     for existing_line in self.lines:
-                        if self.line_intersects(existing_line, new_line):
+                        if GameState.line_intersects(existing_line, new_line):
                             illegal = True
                             break
                     # Check if the new line passes through any other dot.
-                    if not illegal and self.line_crosses_button(new_line):
-                        illegal = True
-
+                    if self.line_crosses_button(new_line):
+                        # illegal = True
+                        return
                     # If illegal, apply a penalty to the mover.
                     if illegal:
                         print("Illegal move detected: penalty applied, but connection will be drawn.")
@@ -334,7 +316,7 @@ class Game:
                     # 1) Check crossing
                     crossing = False
                     for existing_line in self.lines:
-                        if self.line_intersects(existing_line, new_line):
+                        if GameState.line_intersects(existing_line, new_line):
                             crossing = True
                             break
 
@@ -386,21 +368,19 @@ class Game:
             Text(145, 113, "Sākt no jauna", "Arial", 20, (255, 255, 255),True).draw(self.screen)
             pg.draw.rect(self.screen, (255,0,0), pg.Rect(370, 50, 40, 40))
             pg.draw.rect(self.screen, (157,0,255), pg.Rect(370, 100, 40, 40))
-            Text(420, 60, "1. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
-            Text(540, 60, str(self.player_1), "Arial", 20, (255, 255, 255)).draw(self.screen)
-            Text(420, 110, "2. Spēlētājs:", "Arial", 20, (255, 255, 255)).draw(self.screen)
-            Text(540, 110, str(self.player_2), "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(420, 60, f"1. Spēlētājs: {self.player_1}", "Arial", 20, (255, 255, 255)).draw(self.screen)
+            Text(420, 110, f"2. Spēlētājs: {self.player_2}", "Arial", 20, (255, 255, 255)).draw(self.screen)
             
 
-
+            # if self.game_ended:
             if not self.check_available_moves():
-                            if self.player_1 > self.player_2:
-                                Text(390, 160, "Spēle pabeigta! Uzvarēja 2. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
-                                
-                            elif self.player_1 < self.player_2:
-                                Text(390, 160, "Spēle pabeigta! Uzvarēja 1. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
-                            else:
-                                Text(390, 160, "Spēle pabeigta! Izšķirts!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                if self.player_1 > self.player_2:
+                    Text(390, 160, "Spēle pabeigta! Uzvarēja 2. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                    
+                elif self.player_1 < self.player_2:
+                    Text(390, 160, "Spēle pabeigta! Uzvarēja 1. spēlētājs!", "Arial", 20, (255, 255, 255)).draw(self.screen)
+                else:
+                    Text(390, 160, "Spēle pabeigta! Izšķirts!", "Arial", 20, (255, 255, 255)).draw(self.screen)
 
             
             for line in self.lines:
